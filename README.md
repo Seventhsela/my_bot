@@ -15,9 +15,11 @@
 git clone https://github.com/username/my_bot.git
 2. Установи зависимости:
 pip install -r requirements.txt
-3. Создай файл `config.py` и добавь токены:
-```python
-BOT_TOKEN = "твой_токен_бота"
-OPENAI_API_KEY = "твой_API_ключ"
-Запусти бота:
+3. Создайте `.env` файл со следующим содержанием:
+BOT_TOKEN=ваш_токен_бота 
+OPENAI_API_KEY=ваш_API_ключ
+
+А затем запустите:
+
+```bash
 python main.py
