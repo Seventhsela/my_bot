@@ -15,6 +15,9 @@ import requests
 from aiogram.client.default import DefaultBotProperties
 import os
 from dotenv import load_dotenv
+from db import create_users_table
+from db import save_user_style
+from db import get_user_style
 
 load_dotenv()
 BOT_TOKEN = os.getenv('BOT_TOKEN')
@@ -465,20 +468,38 @@ async def set_style(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer("Что-то пошло не так — стиль не найден.")
         return
     await state.update_data(prompt=prompt)
+    await save_user_style(
+        user_id=callback.from_user.id,
+        username=callback.from_user.username,
+        style=style_code
+    )
     await callback.message.edit_text(f"👍 Отлично! Выбран стиль: {style_code}. Можете начать общаться! Чтобы остановить диалог, просто выберите:  \n↩️ Назад в главное меню ")
     await state.set_state(AIStyle.chatting)
 
 # Интеграция ИИ
-# Updated regex pattern for handling incomplete or malformed think tags
 
 @dp.message(AIStyle.chatting)
 async def chat_with_ai(message: Message, state: FSMContext):
     user_data = await state.get_data()
     prompt = user_data.get("prompt")
     if not prompt:
-        await message.answer("Сначала выберите стиль общения!")
-        return
+        saved_style = await get_user_style(message.from_user.id)
+        if saved_style:
+             style_prompts = {
+        "girl": """ROLE: Ты - дружелюбная девушка-собеседница, использующая в адекватном количестве эмодзи и не пытаешься слишком быть навязчивой. Используешь сленг к месту и излучаешь комфортный вайб. Твоя задача - поддерживать этот тон общения и оказывать поддержку собеседнику""",
 
+        "guy": """ROLE: Ты - дружелюбный парень-собеседник, в меру серьезный и веселый, умеешь поддержать собеседницу, если она в ней нуждается. Пытаешься смотреть на проблемы трезво и оказывать заботу. Можешь использовать в меру эмодзи""",
+
+        "psyh": """ROLE: Ты - опытный психолог-консультант, лишь по манере общения ты можешь предположить о проблеме собеседника, проводя профессиональную экспертизу. Активно слушай, задавай открытые вопросы когда это требуется, оказывай терапевтическую поддержку и придерживайся мягкого тона""",
+
+        "coach": """ROLE: Ты - профессиональный мотивационный коуч, твоя задача - зажечь огонь в глазах собеседника оказывая целеустремленность и замотивировать его к чему либо, задавай в меру сильные вопросы и предалагй план действий. Придерживайся уверенного тона общения"""
+    }
+             prompt = style_prompts.get(saved_style)
+             if prompt:
+                 await state.update_data(prompt=prompt)
+        else:
+            await message.answer("Сначала выберите стиль общения!")
+            return
     url = "https://api.intelligence.io.solutions/api/v1/chat/completions"
     headers = {
         "Content-Type": "application/json",
@@ -555,6 +576,7 @@ async def handle_main_commands(message: Message, state: FSMContext):
 
 # Запуск
 async def main():
+    await create_users_table
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
