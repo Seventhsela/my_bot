@@ -576,7 +576,7 @@ async def handle_main_commands(message: Message, state: FSMContext):
 
 # Запуск
 async def main():
-    await create_users_table
+    await create_users_table()
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
