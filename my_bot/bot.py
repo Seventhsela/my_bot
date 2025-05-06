@@ -534,10 +534,10 @@ CONVERSATION FLOW:
     messages.append({"role": "user", "content": message.text})
     
     data = {
-        "model": "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
+        "model": "microsoft/phi-4",
         "messages": messages,
         "temperature": 0.7,
-        "max_tokens": 1000
+        "max_tokens": 600
     }
 
     await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
