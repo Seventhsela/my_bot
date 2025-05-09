@@ -18,6 +18,9 @@ from dotenv import load_dotenv
 from db import create_users_table
 from db import save_user_style
 from db import get_user_style
+from db import get_user_history
+from db import save_user_history
+import json
 
 load_dotenv()
 BOT_TOKEN = os.getenv('BOT_TOKEN')
@@ -162,28 +165,28 @@ async def choose_style(message: Message, state: FSMContext):
             await state.set_state(AIStyle.chatting)
             return
 
-    await message.answer("🎭 Выбери стиль общения:", reply_markup=styles_keyboard)
+    await message.answer("🎭 Выберите стиль общения:", reply_markup=styles_keyboard)
     await state.set_state(AIStyle.choosing_style)
 
 @dp.callback_query(F.data == "no")
 async def no(callback: CallbackQuery, state: FSMContext):
     await state.clear()
-    await callback.message.answer("🎭 Выбери стиль общения:", reply_markup=styles_keyboard)
+    await callback.message.answer("🎭 Выберите стиль общения:", reply_markup=styles_keyboard)
     await state.set_state(AIStyle.choosing_style)
     await callback.answer()
 
 @dp.callback_query(F.data == "yes")
 async def yes(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
-
+    history = await get_user_history(user_id)
     saved_style = await get_user_style(user_id)
 
     if saved_style:
-        await state.update_data(prompt=saved_style)
-        await state.set_state(AIStyle.chatting)
+        await state.update_data(history=history)
         await callback.message.answer("Можешь продолжить общение с ИИ!")
+        await state.set_state(AIStyle.chatting)
     else:
-        await callback.message.answer("❌ Стиль не найден. Пожалуйста, выбери стиль общения 👇", reply_markup=styles_keyboard)
+        await callback.message.answer("❌ Стиль не найден. Пожалуйста, выберите стиль общения 👇", reply_markup=styles_keyboard)
     await callback.answer()
 
 # Обработка нажатия на кнопку "🌐 Мои социальные сети"
@@ -385,7 +388,7 @@ async def back_to_main(message: Message, state: FSMContext):
 @dp.message(lambda message: message.text == "СТОП!")
 async def stop_dialogue(message: Message, state: FSMContext):
     await state.clear()
-    await message.answer("Выбери стиль общения:", reply_markup=styles_keyboard)
+    await message.answer("🎭 Выберите стиль общения:", reply_markup=styles_keyboard)
     await state.set_state(AIStyle.choosing_style)
 
 # Обработка уменьшения тревожности
@@ -550,7 +553,7 @@ async def chat_with_ai(message: Message, state: FSMContext):
              if prompt:
                  await state.update_data(prompt=prompt)
         else:
-            await message.answer("Сначала выберите стиль общения!")
+            await message.answer("🎭 Сначала выберите стиль общения!")
             return
     url = "https://api.intelligence.io.solutions/api/v1/chat/completions"
     headers = {
@@ -559,6 +562,7 @@ async def chat_with_ai(message: Message, state: FSMContext):
     }
 
     history = user_data.get("history", [])
+
     
     system_message = f"""<system>
 [SYSTEM NOTE: You are now entering a strict role-play mode. You must FULLY embody the assigned character and maintain this persona throughout the entire conversation. Breaking character is not allowed.]
@@ -616,6 +620,7 @@ CONVERSATION FLOW:
         history.append({"role": "assistant", "content": clean_text.strip()})
         
         await state.update_data(history=history[-20:])
+        await save_user_history(message.from_user.id, json.dumps(history[-20:]))
         
     except KeyError:
         await message.answer("Извините, сейчас я не могу ответить, попробуйте позже.")
