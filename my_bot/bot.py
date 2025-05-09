@@ -163,6 +163,13 @@ contacts = ["Instagram", 'Whatsapp', "Telegram"]
 async def choose_style(message: Message, state: FSMContext):
     saved_style = await get_user_style(message.from_user.id)
 
+    style_names = {
+        "girl": "Девушка",
+        "guy": "Парень",
+        "psyh": "Психолог",
+        "coach": "Наставник"
+    }
+
     if saved_style:
         style_prompts = {
         "girl": """ROLE: Ты - дружелюбная девушка-собеседница, использующая в адекватном количестве эмодзи и не пытаешься слишком быть навязчивой. Твое  общение максимально приближенно к реальному, и ты учитываешь что люди обращаются к тебе за помощью. Используешь сленг к месту и излучаешь комфортный вайб. Твоя задача - поддерживать этот тон общения и оказывать поддержку собеседнику""",
@@ -177,10 +184,32 @@ async def choose_style(message: Message, state: FSMContext):
         if prompt:
             await state.update_data(prompt=prompt)
             history = await get_user_history(message.from_user.id)
-            await state.update_data(history=history)
-            await message.answer(f"Последний выбранный вами стиль: {saved_style}.\nПродолжаем? Или хотите сменить стиль?", reply_markup=yes_or_no)
-            await state.set_state(AIStyle.chatting)
-            return
+            if history:
+                try:
+                    # Try to parse history as JSON if it's a string
+                    if isinstance(history, str):
+                        history_data = json.loads(history)
+                    else:
+                        history_data = history
+                    
+                    # Add parsed history to state
+                    await state.update_data(history=history_data)
+                    
+                    # Display friendly style name from dictionary
+                    style_name = style_names.get(saved_style, saved_style)
+                    
+                    await message.answer(f"Последний выбранный вами стиль: {style_name}.\nПродолжаем? Или хотите сменить стиль?", reply_markup=yes_or_no)
+                    await state.set_state(AIStyle.chatting)
+                    return
+                except json.JSONDecodeError:
+                    # If history can't be parsed, proceed with just the prompt
+                    pass
+            else:
+                # If no history, still offer to continue with the saved style
+                style_name = style_names.get(saved_style, saved_style)
+                await message.answer(f"Последний выбранный вами стиль: {style_name}.\nПродолжаем? Или хотите сменить стиль?", reply_markup=yes_or_no)
+                await state.set_state(AIStyle.chatting)
+                return
 
     await message.answer("🎭 Выберите стиль общения:", reply_markup=styles_keyboard)
     await state.set_state(AIStyle.choosing_style)
@@ -199,7 +228,21 @@ async def yes(callback: CallbackQuery, state: FSMContext):
     saved_style = await get_user_style(user_id)
 
     if saved_style:
-        await state.update_data(history=history)
+        if history:
+            try:
+                # Parse history if it's a string
+                if isinstance(history, str):
+                    history_data = json.loads(history)
+                else:
+                    history_data = history
+                await state.update_data(history=history_data)
+            except json.JSONDecodeError:
+                # If parsing fails, initialize empty history
+                await state.update_data(history=[])
+        else:
+            # Initialize empty history
+            await state.update_data(history=[])
+            
         await callback.message.answer("Можешь продолжить общение с ИИ!")
         await state.set_state(AIStyle.chatting)
     else:
@@ -563,7 +606,17 @@ async def chat_with_ai(message: Message, state: FSMContext):
     }
              prompt = style_prompts.get(saved_style)
              if prompt:
-                 await state.update_data(prompt=prompt)
+                await state.update_data(prompt=prompt)
+                history = user_data.get("history")
+                if not history:
+                    history = await get_user_history(message.from_user.id)
+                    if isinstance(history, str):
+                        try:
+                            history = json.loads(history)
+                            await state.update_data(history=history)
+                        except json.JSONDecodeError:
+                            history = []
+                            await state.update_data(history=history)
         else:
             await message.answer("🎭 Сначала выберите стиль общения!")
             return
