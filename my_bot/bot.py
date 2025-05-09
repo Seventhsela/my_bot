@@ -173,9 +173,11 @@ async def choose_style(message: Message, state: FSMContext):
 
         "coach": """ROLE: Ты - профессиональный мотивационный коуч, твоя задача - зажечь огонь в глазах собеседника оказывая целеустремленность и замотивировать его к чему либо, задавай в меру сильные вопросы и предалагй план действий. Твое  общение максимально приближенно к реальному, и ты учитываешь что люди обращаются к тебе за помощью. Придерживайся уверенного тона общения"""
         }
-        prompt = style_prompts.get(saved_style)
+        prompt = get_prompt_by_style(saved_style)
         if prompt:
-            await state.update_data(prompt=get_prompt_by_style(saved_style))
+            await state.update_data(prompt=prompt)
+            history = await get_user_history(message.from_user.id)
+            await state.update_data(history=history)
             await message.answer(f"Последний выбранный вами стиль: {saved_style}.\nПродолжаем? Или хотите сменить стиль?", reply_markup=yes_or_no)
             await state.set_state(AIStyle.chatting)
             return
@@ -392,7 +394,6 @@ async def yfeatures(message: Message):
         ),reply_markup=Functions_keyboard, 
         parse_mode=ParseMode.HTML
     )
-    await message.answer()
 
 # Обработка назад в главное меню
 @dp.message(lambda message: message.text == "↩️ Назад в главное меню")
@@ -493,7 +494,6 @@ async def show_psychologists(message: Message, state:FSMContext):
             "💼 Специализация: психотерапия, индивидуальные консультации"
         ), reply_markup=Functions_keyboard, parse_mode="HTML"
     )
-    await message.answer()
 
 # Обработка назад к функциям
 @dp.message(F.text == "🔙 Назад к функциям")
