@@ -503,9 +503,7 @@ async def back_bot_features(message: Message, state: FSMContext):
 # Обработка стилей
 @dp.callback_query(F.data.startswith("style_"))
 async def set_style(callback: CallbackQuery, state: FSMContext):
-    print(f"[DEBUG] Callback data: {callback.data}")
     style_code = callback.data.split("_")[1]
-    print(f"[DEBUG] Extracted style_code: {style_code}")
     
     style_prompts = {
         "girl": """ROLE: Ты - дружелюбная девушка-собеседница, использующая в адекватном количестве эмодзи и не пытаешься слишком быть навязчивой. Используешь сленг к месту и излучаешь комфортный вайб. Твоя задача - поддерживать этот тон общения и оказывать поддержку собеседнику""",
@@ -518,7 +516,6 @@ async def set_style(callback: CallbackQuery, state: FSMContext):
     }
 
     prompt = style_prompts.get(style_code)
-    print(f"[DEBUG] Prompt found: {prompt}")
     if not prompt:
         await callback.message.answer("Что-то пошло не так — стиль не найден.")
         return
@@ -562,6 +559,11 @@ async def chat_with_ai(message: Message, state: FSMContext):
     }
 
     history = user_data.get("history", [])
+    if isinstance(history, str):
+        try:
+          history = json.loads(history)
+        except json.JSONDecodeError:
+          history = []
 
     
     system_message = f"""<system>
