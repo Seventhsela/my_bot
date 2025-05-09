@@ -60,7 +60,7 @@ information_buttons = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="👾 Что умеет бот?", callback_data="functions")]])
 
 yes_or_no = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="Продолжить", callback_data="yes"), InlineKeyboardButton(text="Сменить стиль", callback_data="no")]
+    [InlineKeyboardButton(text="Продолжить ➡️", callback_data="yes"), InlineKeyboardButton(text="Сменить стиль 🔄", callback_data="no")]
 ])
 
 metods = ReplyKeyboardMarkup(
@@ -158,17 +158,17 @@ async def choose_style(message: Message, state: FSMContext):
         prompt = style_prompts.get(saved_style)
         if prompt:
             await state.update_data(prompt=prompt)
-            await message.answer(f"✅ Последний выбранный вами стиль: {saved_style}.\nПродолжаем? Или хотите сменить стиль?", reply_markup=yes_or_no)
+            await message.answer(f"Последний выбранный вами стиль: {saved_style}.\nПродолжаем? Или хотите сменить стиль?", reply_markup=yes_or_no)
             await state.set_state(AIStyle.chatting)
             return
 
-    await message.answer("Выбери стиль общения:", reply_markup=styles_keyboard)
+    await message.answer("🎭 Выбери стиль общения:", reply_markup=styles_keyboard)
     await state.set_state(AIStyle.choosing_style)
 
 @dp.callback_query(F.data == "no")
-async def no(callback:CallbackQuery, state: FSMContext):
+async def no(callback: CallbackQuery, state: FSMContext):
     await state.clear()
-    await callback.answer("Выбери стиль общения:", reply_markup=styles_keyboard)
+    await callback.message.answer("🎭 Выбери стиль общения:", reply_markup=styles_keyboard)
     await state.set_state(AIStyle.choosing_style)
     await callback.answer()
 
@@ -181,7 +181,7 @@ async def yes(callback: CallbackQuery, state: FSMContext):
     if saved_style:
         await state.update_data(prompt=saved_style)
         await state.set_state(AIStyle.chatting)
-        await callback.message.answer("✅ Можешь продолжить общение с ИИ!")
+        await callback.message.answer("Можешь продолжить общение с ИИ!")
     else:
         await callback.message.answer("❌ Стиль не найден. Пожалуйста, выбери стиль общения 👇", reply_markup=styles_keyboard)
     await callback.answer()
@@ -238,7 +238,8 @@ async def bot_features(callback: CallbackQuery):
 
 # Обработка дыхательных практик
 @dp.message(F.text == "🧘 Дыхательные практики")
-async def relax(message: Message):
+async def relax(message: Message, state:FSMContext):
+    await state.clear()
     await message.answer(text=("Выберите дыхательную практику, которая вам ближе 👇"), reply_markup=metods)
 
 # Обраюотка методики Джекбоксона   
@@ -389,7 +390,8 @@ async def stop_dialogue(message: Message, state: FSMContext):
 
 # Обработка уменьшения тревожности
 @dp.message(F.text == "📉 Уменьшить тревожность")
-async def less(message: Message):
+async def less(message: Message, state: FSMContext):
+    await state.clear()
     await message.answer(text=(
         '''🧘‍♀️ <b>Давайте подышим...</b>
 Сосредоточьтесь на своём дыхании.
@@ -417,7 +419,8 @@ async def less(message: Message):
 
 # Обработка назад к функциям   
 @dp.message(F.text == "🔙 Назад к функциям")
-async def back_bot_features(message: Message):
+async def back_bot_features(message: Message, state: FSMContext):
+    await state.clear()
     await message.answer(
         text=(
             "🧠 <b>Функции бота:</b>\n\n"
@@ -437,7 +440,8 @@ async def back_bot_features(message: Message):
 
 # Обработка психологов
 @dp.message(F.text == "👩‍⚕️ Список психологов")
-async def show_psychologists(message: Message):
+async def show_psychologists(message: Message, state:FSMContext):
+    await state.clear()
     await message.answer(
         text=(
             "<b>🧠 Список психологов в Кокшетау</b>\n\n"
@@ -469,14 +473,14 @@ async def show_psychologists(message: Message):
             "📍 Адрес: ул. Зарапа Темирбекова, 2А\n"
             "📞 Телефон: +7 (7162) 33-44-55\n"
             "💼 Специализация: психотерапия, индивидуальные консультации"
-        ),
-        parse_mode="HTML"
+        ), reply_markup=Functions_keyboard, parse_mode="HTML"
     )
     await message.answer()
 
 # Обработка назад к функциям
 @dp.message(F.text == "🔙 Назад к функциям")
-async def back_bot_features(message: Message):
+async def back_bot_features(message: Message, state: FSMContext):
+    await state.clear()
     await message.answer(
         text=(
             "🧠 <b>Функции бота:</b>\n\n"
@@ -521,7 +525,7 @@ async def set_style(callback: CallbackQuery, state: FSMContext):
         username=callback.from_user.username,
         style=style_code
     )
-    await callback.message.edit_text(f"👍 Отлично! Выбран стиль: {style_code}. Можете начать общаться! Чтобы остановить диалог, просто выберите:  \n↩️ Назад в главное меню ")
+    await callback.message.edit_text(f"👍 Отлично! Выбран стиль: {style_code}. Можете начать общаться! Чтобы остановить диалог, напишите в чат:  \n'СТОП!'(без кавычек)")
     await state.set_state(AIStyle.chatting)
 
 # Интеграция ИИ
@@ -585,13 +589,14 @@ CONVERSATION FLOW:
         "model": "microsoft/phi-4",
         "messages": messages,
         "temperature": 0.7,
-        "max_tokens": 600
+        "max_tokens": 400
     }
 
     await message.bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     
     try:
         response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()
         result = response.json()
         answer = result["choices"][0]["message"]["content"]
         
@@ -612,9 +617,14 @@ CONVERSATION FLOW:
         
         await state.update_data(history=history[-20:])
         
+    except KeyError:
+        await message.answer("Извините, сейчас я не могу ответить, попробуйте позже.")
+    except requests.exceptions.RequestException as e:
+        print(f"Request error: {e}")
+        await message.answer("Произошла ошибка при запросе. Попробуйте позже.")
     except Exception as e:
-        logging.error(f"Error in chat_with_ai: {e}")
-        await message.answer("Произошла ошибка при обработке запроса. Пожалуйста, попробуйте еще раз.")
+        print(f"Unexpected error: {e}")
+        await message.answer("Произошла непредвиденная ошибка. Попробуйте позже.")
 
 
 
