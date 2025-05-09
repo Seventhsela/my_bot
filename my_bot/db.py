@@ -18,6 +18,15 @@ async def create_users_table():
             history TEXT
         )
     ''')
+async def save_user(user_id, username):
+    conn = await connect_db()
+    await conn.execute('''
+        INSERT INTO users (user_id, username)
+        VALUES ($1, $2)
+        ON CONFLICT (user_id) DO UPDATE SET username = $2
+    ''', user_id, username)
+    await conn.close()
+
 async def save_user_style(user_id, username, style):
     conn = await connect_db()
     await conn.execute('''
