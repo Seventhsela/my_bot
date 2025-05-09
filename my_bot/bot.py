@@ -19,7 +19,7 @@ from db import create_users_table
 from db import save_user_style
 from db import get_user_style
 from db import get_user_history
-from db import save_user_history
+from db import save_user_history, save_user
 import json
 
 load_dotenv()
@@ -45,7 +45,11 @@ user_styles = {}
 
 # Старт
 @dp.message(F.text == "/start")
-async def start(message: Message):
+async def start(message: Message, state: FSMContext):
+    await state.clear()
+    user_id = message.from_user.id
+    username = message.from_user.username or "NoUsername"
+    await save_user(user_id, username)
     await message.answer("<b>Привет!</b> 👋\n\n"
     '''Похоже, ты оказался здесь не просто так. Возможно, тебя что-то тревожит, ты чувствуешь усталость или просто хочешь немного расслабиться.\nВ любом случае — ты по адресу!\n
     Я — бот, который поможет тебе почувствовать себя лучше. Сo мной ты сможешь:
@@ -377,7 +381,6 @@ async def yfeatures(message: Message):
         ),reply_markup=Functions_keyboard, 
         parse_mode=ParseMode.HTML
     )
-    await message.answer()
 
 # Обработка назад в главное меню
 @dp.message(lambda message: message.text == "↩️ Назад в главное меню")
@@ -478,7 +481,6 @@ async def show_psychologists(message: Message, state:FSMContext):
             "💼 Специализация: психотерапия, индивидуальные консультации"
         ), reply_markup=Functions_keyboard, parse_mode="HTML"
     )
-    await message.answer()
 
 # Обработка назад к функциям
 @dp.message(F.text == "🔙 Назад к функциям")
@@ -649,4 +651,3 @@ if __name__ == "__main__":
          asyncio.run(main())
     except KeyboardInterrupt:
         print("Bot is disconnect!")
-
