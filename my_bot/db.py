@@ -1,8 +1,11 @@
 import asyncpg
 import os
+import json
+
 
 async def connect_db():
     return await asyncpg.connect(os.getenv("DATABASE_URL"))
+
 
 async def create_users_table():
     conn = await connect_db()
@@ -11,7 +14,8 @@ async def create_users_table():
             user_id BIGINT PRIMARY KEY,
             username TEXT,
             style TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            history TEXT
         )
     ''')
 async def save_user_style(user_id, username, style):
@@ -26,3 +30,17 @@ async def get_user_style(user_id):
     row = await conn.fetchrow('SELECT style FROM users WHERE user_id = $1', user_id)
     await conn.close()
     return row['style'] if row else None
+
+async def save_user_history(user_id, history):
+    conn = await connect_db()
+    await conn.execute('''
+        UPDATE users SET history = $1 WHERE user_id = $2
+    ''', json.dumps(history), user_id)
+    await conn.close()
+
+async def get_user_history(user_id):
+    conn = await connect_db()
+    row = await conn.fetchrow('SELECT history FROM users WHERE user_id = $1', user_id)
+    await conn.close()
+    return json.loads(row['history']) if row and row['history'] else []
+
