@@ -166,26 +166,25 @@ async def choose_style(message: Message, state: FSMContext):
     await state.set_state(AIStyle.choosing_style)
 
 @dp.callback_query(F.data == "no")
-async def no(callback:CallbackQuery):
+async def no(callback:CallbackQuery, state: FSMContext):
+    await state.clear()
     await callback.answer("Выбери стиль общения:", reply_markup=styles_keyboard)
-    await callback.state.set_state(AIStyle.choosing_style)
+    await state.set_state(AIStyle.choosing_style)
+    await callback.answer()
 
 @dp.callback_query(F.data == "yes")
 async def yes(callback: CallbackQuery, state: FSMContext):
-    user_id = callback.message.from_user.id
+    user_id = callback.from_user.id
 
-    # Пытаемся получить стиль из БД
     saved_style = await get_user_style(user_id)
 
     if saved_style:
-        # Если стиль найден — записываем его в состояние и переходим в режим общения
         await state.update_data(prompt=saved_style)
         await state.set_state(AIStyle.chatting)
-        await callback.message.answer("Отлично! Можешь продолжить общение с ИИ. 😊")
+        await callback.message.answer("✅ Можешь продолжить общение с ИИ!")
     else:
-        # Если стиль не найден — просим выбрать стиль сначала
-        await callback.message.answer("Похоже, ты ещё не выбрал стиль общения. Выбери его сначала ниже ⬇️", reply_markup=styles_keyboard)
-
+        await callback.message.answer("❌ Стиль не найден. Пожалуйста, выбери стиль общения 👇", reply_markup=styles_keyboard)
+    await callback.answer()
 
 # Обработка нажатия на кнопку "🌐 Мои социальные сети"
 @dp.callback_query(F.data == 'media')
@@ -381,6 +380,12 @@ async def yfeatures(message: Message):
 async def back_to_main(message: Message, state: FSMContext):
     await state.clear()
     await start(message)
+
+@dp.message(lambda message: message.text == "СТОП!")
+async def stop_dialogue(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer("Выбери стиль общения:", reply_markup=styles_keyboard)
+    await state.set_state(AIStyle.choosing_style)
 
 # Обработка уменьшения тревожности
 @dp.message(F.text == "📉 Уменьшить тревожность")
